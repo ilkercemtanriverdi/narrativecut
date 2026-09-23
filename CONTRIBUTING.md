@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve FluxEngine Video Studio.
+Thanks for helping improve NarrativeCut.
 
 1. Create a focused branch from `main`.
 2. Keep changes local-first and free of credentials, private data, and bundled media.

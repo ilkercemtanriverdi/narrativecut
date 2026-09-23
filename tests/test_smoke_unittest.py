@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from fluxengine_video_studio.core import build, revise
+from narrativecut.core import build, revise
 
 
 class CoreSmokeTest(unittest.TestCase):

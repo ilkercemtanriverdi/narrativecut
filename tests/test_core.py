@@ -1,7 +1,7 @@
 import json, subprocess, sys
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).parents[1]))
-from fluxengine_video_studio.core import build, parse_script, revise, srt_time, write_srt
+from narrativecut.core import build, parse_script, revise, srt_time, write_srt
 
 def test_parse_and_outputs(tmp_path):
     assets=tmp_path/'assets'; assets.mkdir(); (assets/'archive.png').write_bytes(b'fixture')

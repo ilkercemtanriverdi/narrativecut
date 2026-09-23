@@ -1,4 +1,4 @@
-# FluxEngine Video Studio
+# NarrativeCut
 
 Turn a script, a JSON brief, and rights-described local assets into a deterministic documentary plan: timeline, subtitles, asset-license report, and optional 16:9 MP4 rendering.
 
@@ -9,7 +9,7 @@ Requires Python 3.11+. The planning core has no runtime dependency outside the s
 ```sh
 python -m venv .venv && . .venv/bin/activate
 python -m pip install -e . pytest
-python -m fluxengine_video_studio \
+python -m narrativecut \
   --brief examples/minimal/brief.json \
   --script examples/minimal/script.txt \
   --assets examples/minimal/assets \
