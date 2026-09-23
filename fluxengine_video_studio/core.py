@@ -74,7 +74,7 @@ def editorial_gate(timeline):
     if totals and max(totals.values())/dur > .20: reasons.append("one asset exceeds 20% screen-time")
     first60=[s for s in scenes if s["start"]<60 and s.get("asset") and s["asset"]["specificity"] in {"topic","entity","event"}]
     if len(first60)<2: reasons.append("fewer than 2 topic-specific assets in first 60s")
-    if untreated_static/dur > .25: reasons.append("untreated static ratio exceeds 25%")
+    if dur and untreated_static/dur > .25: reasons.append("untreated static ratio exceeds 25%")
     direct=sum(s["duration"] for s in scenes if s.get("asset") and s["asset"]["match_level"] in DIRECT)/dur if dur else 0
     static=sum(s["duration"] for s in scenes if s.get("asset") and s["asset"]["role"] in {"explanatory-graphic","title-card"})/dur if dur else 0
     return {"pass":not reasons,"reasons":reasons,"metrics":{"asset_count":len({a['sha256'] for a in assets}),"visual_classes":len({a['role'] for a in assets}),"direct_or_supporting_coverage":round(direct,3),"static_treated_or_graphic_ratio":round(static,3),"untreated_static_ratio":round(untreated_static/dur,3) if dur else 1,"critical_mismatch_count":sum(1 for s in scenes if (s.get('asset') or {}).get('match_level')=='mismatch'),"first_60s_topic_specific_assets":len(first60),"treatment_diversity":len(set(treatments)),"composition_diversity":len(set(compositions)),"consecutive_static_equivalent_shots":static_equiv}}

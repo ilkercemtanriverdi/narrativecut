@@ -11,6 +11,8 @@ requires-python = ">=3.11"
 [project.scripts]
 fluxengine-video = "fluxengine_video_studio.__main__:main"
 
+[tool.setuptools.packages.find]
+include = ["fluxengine_video_studio*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-

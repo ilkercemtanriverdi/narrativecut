@@ -1,0 +1,20 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e . pytest
+      - run: python -m pytest
+      - run: python -m compileall -q fluxengine_video_studio
+      - run: '! rg -n "(/Users/|BEGIN (RSA|OPENSSH|EC) PRIVATE KEY|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9_]{20,})" --glob "!.git/**" .'
+      - run: python -m fluxengine_video_studio --brief examples/minimal/brief.json --script examples/minimal/script.txt --assets examples/minimal/assets --output /tmp/fluxengine-smoke
