@@ -1,5 +1,7 @@
 # NarrativeCut
 
+[![CI](https://github.com/ilkercemtanriverdi/narrativecut/actions/workflows/ci.yml/badge.svg)](https://github.com/ilkercemtanriverdi/narrativecut/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) [![Latest release](https://img.shields.io/github/v/release/ilkercemtanriverdi/narrativecut)](https://github.com/ilkercemtanriverdi/narrativecut/releases/latest)
+
 Turn a script, a JSON brief, and rights-described local assets into a deterministic documentary plan: timeline, subtitles, asset-license report, and optional 16:9 MP4 rendering.
 
 ## Quickstart
@@ -42,6 +44,26 @@ outputs/example/
 └── timeline.json
 ```
 
+The checked-in minimal example is safe to run without media or credentials:
+
+```sh
+python -m narrativecut \
+  --brief examples/minimal/brief.json \
+  --script examples/minimal/script.txt \
+  --assets examples/minimal/assets \
+  --output outputs/example
+```
+
+It produces a deterministic planning bundle:
+
+```text
+timeline.json              # timed scenes and editorial gate
+subtitles.srt              # scene-aligned subtitles
+asset-license-report.json  # admitted assets and rights basis
+```
+
+With the sample asset directory intentionally empty, the report records unmatched scenes instead of inventing media. Add local assets only with the required rights sidecars before rendering.
+
 This repository intentionally excludes provider credentials, publishing,
 commercial channel strategy, user data, model weights, and supplied media.
 Rights metadata is an input contract, not a legal warranty.
@@ -56,3 +78,5 @@ v0.1.0 is a small OSS core extracted from a larger private workspace. Rendering 
 - Rendering requires local FFmpeg, narration, and decodable media.
 - The planner does not download media or call model/provider APIs.
 - Future work may add more media validators and platform-neutral render adapters.
+
+Roadmap discussions live in [GitHub Issues](https://github.com/ilkercemtanriverdi/narrativecut/issues).

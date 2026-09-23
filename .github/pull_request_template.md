@@ -1,7 +1,13 @@
-## Summary
+## What changed?
 
-## Checks
+<!-- Describe the smallest user-visible change. -->
+
+## Why?
+
+<!-- Link the issue and explain the motivation. -->
+
+## Verification
 
 - [ ] Tests pass locally
-- [ ] No secrets, private data, or unclear-rights assets added
-- [ ] Documentation updated if needed
+- [ ] Docs/examples updated when behavior changed
+- [ ] No credentials, private data, or unlicensed media included

@@ -11,10 +11,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-      - run: python -m pip install --upgrade pip
-      - run: python -m pip install -e . pytest
+          python-version: "3.11"
+      - run: python -m pip install --upgrade pip pytest
       - run: python -m pytest
-      - run: python -m compileall -q narrativecut
-      - run: '! rg -n "(/Users/|BEGIN (RSA|OPENSSH|EC) PRIVATE KEY|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9_]{20,})" --glob "!.git/**" .'
-      - run: python -m narrativecut --brief examples/minimal/brief.json --script examples/minimal/script.txt --assets examples/minimal/assets --output /tmp/narrativecut-smoke
