@@ -8,6 +8,9 @@ version = "0.1.0"
 description = "Deterministic, local-first documentary video compilation core"
 requires-python = ">=3.11"
 
+[project.optional-dependencies]
+yaml = ["PyYAML>=6.0"]
+
 [project.scripts]
 narrativecut = "narrativecut.__main__:main"
 

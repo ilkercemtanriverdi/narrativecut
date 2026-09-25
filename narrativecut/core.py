@@ -6,6 +6,50 @@ from pathlib import Path
 TYPE_WEIGHT = {"footage": 1.0, "public_domain": .95, "stock": .9, "screenshot": .85, "document": .82, "chart": .8, "ai": .35, "unknown": .1}
 VISUAL_ROLES = {"primary-footage","specific-entity","document-evidence","data-chart","screenshot","context-broll","explanatory-graphic","title-card"}
 DIRECT = {"direct", "supporting"}
+SCHEMA_VERSION = "1.0"
+
+class ValidationError(ValueError):
+    """A deterministic project schema validation failure."""
+
+def _object(value, label):
+    if not isinstance(value, dict): raise ValidationError(f"{label}: expected an object")
+    return value
+
+def validate_brief(data):
+    data = _object(data, "brief")
+    if "schema_version" in data and data["schema_version"] != SCHEMA_VERSION:
+        raise ValidationError(f"brief.schema_version: unsupported version {data['schema_version']!r}; expected '{SCHEMA_VERSION}'")
+    if "title" in data and (not isinstance(data["title"], str) or not data["title"].strip()):
+        raise ValidationError("brief.title: expected a non-empty string")
+    return data
+
+def validate_timeline(data):
+    data = _object(data, "project")
+    if data.get("schema_version") != SCHEMA_VERSION:
+        raise ValidationError(f"project.schema_version: unsupported or missing version {data.get('schema_version')!r}; expected '{SCHEMA_VERSION}'")
+    if not isinstance(data.get("brief"), dict): raise ValidationError("project.brief: required object")
+    validate_brief(data["brief"])
+    if not isinstance(data.get("script"), str) or not data["script"].strip(): raise ValidationError("project.script: required non-empty string")
+    if not isinstance(data.get("assets"), str) or not data["assets"].strip(): raise ValidationError("project.assets: required non-empty path string")
+    return data
+
+def load_project(path: Path):
+    try: raw = path.read_text()
+    except OSError as exc: raise ValidationError(f"cannot read project file: {exc.strerror or exc}") from None
+    try:
+        if path.suffix.lower() in {".yaml", ".yml"}:
+            try: import yaml
+            except ImportError: raise ValidationError("YAML input requires the optional dependency: pip install 'narrativecut[yaml]'") from None
+            data = yaml.safe_load(raw)
+        else: data = json.loads(raw)
+    except ValidationError: raise
+    except json.JSONDecodeError as exc:
+        # Parser diagnostics can vary between versions; keep CLI errors stable.
+        raise ValidationError(f"{path.name}: malformed {('YAML' if path.suffix.lower() in {'.yaml', '.yml'} else 'JSON')} ({type(exc).__name__})") from None
+    except Exception as exc:
+        if path.suffix.lower() not in {".yaml", ".yml"}: raise
+        raise ValidationError(f"{path.name}: malformed YAML ({type(exc).__name__})") from None
+    return validate_timeline(data)
 
 @dataclass
 class Beat:

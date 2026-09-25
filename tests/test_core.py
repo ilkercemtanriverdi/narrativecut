@@ -1,7 +1,7 @@
 import json, subprocess, sys
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).parents[1]))
-from narrativecut.core import build, parse_script, revise, srt_time, write_srt
+from narrativecut.core import build, parse_script, revise, srt_time, write_srt, load_project, validate_brief, validate_timeline, ValidationError
 
 def test_parse_and_outputs(tmp_path):
     assets=tmp_path/'assets'; assets.mkdir(); (assets/'archive.png').write_bytes(b'fixture')
@@ -55,3 +55,38 @@ def test_invalid_revision_scene_is_rejected(tmp_path):
     import pytest
     with pytest.raises(ValueError, match='unknown scene'):
         revise(out / 'timeline.json', 'scene-999', out / 'revision.json')
+
+def test_versioned_project_json_loads_and_builds(tmp_path):
+    assets = tmp_path / 'assets'; assets.mkdir()
+    project = tmp_path / 'project.json'
+    project.write_text(json.dumps({'schema_version':'1.0','brief':{'title':'Versioned'},'script':'A short scene.','assets':str(assets)}))
+    data = load_project(project)
+    assert data['brief']['title'] == 'Versioned'
+    timeline = build(data['brief'], data['script'], assets, tmp_path / 'out')
+    assert timeline['title'] == 'Versioned'
+
+def test_project_validation_reports_missing_and_unsupported_fields():
+    import pytest
+    with pytest.raises(ValidationError, match='project.script: required'):
+        validate_timeline({'schema_version':'1.0','brief':{},'assets':'assets'})
+    with pytest.raises(ValidationError, match='unsupported or missing version'):
+        validate_timeline({'schema_version':'9','brief':{},'script':'x','assets':'assets'})
+
+def test_brief_rejects_invalid_title_and_keeps_legacy_shape():
+    import pytest
+    assert validate_brief({'title':'Legacy'}) == {'title':'Legacy'}
+    with pytest.raises(ValidationError, match='brief.title'):
+        validate_brief({'title':' '})
+
+def test_malformed_project_json_has_stable_validation_error(tmp_path):
+    import pytest
+    path = tmp_path / 'broken.json'; path.write_text('{')
+    with pytest.raises(ValidationError, match='broken.json: malformed JSON'):
+        load_project(path)
+
+def test_yaml_project_is_optional_and_validates_when_installed(tmp_path):
+    import pytest
+    pytest.importorskip('yaml')
+    path = tmp_path / 'project.yaml'
+    path.write_text('schema_version: "1.0"\nbrief:\n  title: YAML\nscript: A scene.\nassets: assets\n')
+    assert load_project(path)['brief']['title'] == 'YAML'
