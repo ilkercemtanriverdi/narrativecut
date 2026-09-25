@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Added version 1.0 JSON project validation and optional YAML input via `narrativecut[yaml]`; legacy JSON briefs remain supported.
+- Invalid and unsupported project fields now produce deterministic CLI validation errors.
+
 ## [0.1.0] - 2026-09-23
 
 - Initial local-first OSS core.

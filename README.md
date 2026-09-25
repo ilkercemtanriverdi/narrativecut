@@ -19,6 +19,17 @@ python -m narrativecut \
 python -m pytest
 ```
 
+### Versioned project files
+
+Legacy `--brief` JSON remains supported (with optional `title`). For explicit schema validation, use `--project` with a JSON file containing `schema_version: "1.0"`, a `brief` object, non-empty `script`, and an `assets` directory path. YAML uses the same contract and is optional because Python's standard library has no YAML parser:
+
+```sh
+python -m pip install 'narrativecut[yaml]'
+python -m narrativecut --project examples/project.yaml --output outputs/example
+```
+
+The JSON path has no runtime dependencies. Unsupported schema versions and invalid fields produce field-specific CLI errors. Version 1.0 accepts the existing brief shape and does not change generated timeline output.
+
 The command writes `timeline.json`, `subtitles.srt`, and `asset-license-report.json`. Assets are discovered only when accompanied by a sidecar file such as `clip.png.json` containing `source`, `rights`, and `subject`.
 
 ## Architecture
