@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "narrativecut"
-version = "0.1.0"
+version = "0.2.0"
 description = "Deterministic, local-first documentary video compilation core"
 requires-python = ">=3.11"
 
