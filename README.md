@@ -83,7 +83,7 @@ Rights metadata is an input contract, not a legal warranty.
 
 ## Status
 
-v0.1.0 is a small OSS core extracted from a larger private workspace. Rendering is local and optional; no network provider is required for planning or validation.
+v0.2.0 is a small OSS core extracted from a larger private workspace. Rendering is local and optional; no network provider is required for planning or validation.
 
 ## Limitations and roadmap
 
