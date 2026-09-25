@@ -1,9 +1,13 @@
 import argparse, json
 from pathlib import Path
-from .core import build, assemble, revise, qc, load_project, validate_brief, ValidationError
+from .core import build, assemble, revise, qc, load_project, validate_brief, validate_asset_manifest, ValidationError
 
 def main():
-    p=argparse.ArgumentParser(); p.add_argument("--project",type=Path); p.add_argument("--brief",type=Path); p.add_argument("--script",type=Path); p.add_argument("--assets",type=Path); p.add_argument("--output",type=Path,required=True); p.add_argument("--narration",type=Path); p.add_argument("--assemble",action="store_true"); p.add_argument("--revise"); a=p.parse_args()
+    p=argparse.ArgumentParser(); p.add_argument("--project",type=Path); p.add_argument("--brief",type=Path); p.add_argument("--script",type=Path); p.add_argument("--assets",type=Path); p.add_argument("--output",type=Path); p.add_argument("--narration",type=Path); p.add_argument("--assemble",action="store_true"); p.add_argument("--revise"); p.add_argument("--validate-assets",action="store_true"); a=p.parse_args()
+    if a.validate_assets:
+        if not a.assets: p.error("--assets is required with --validate-assets")
+        result=validate_asset_manifest(a.assets); print(json.dumps(result,indent=2)); return 0 if result["valid"] else 1
+    if not a.output: p.error("--output is required")
     if a.project:
         if any((a.brief, a.script, a.assets)): p.error("--project cannot be combined with --brief, --script, or --assets")
         try: project=load_project(a.project)

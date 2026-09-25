@@ -1,7 +1,37 @@
 import json, subprocess, sys
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).parents[1]))
-from narrativecut.core import build, parse_script, revise, srt_time, write_srt, load_project, validate_brief, validate_timeline, ValidationError
+from narrativecut.core import build, parse_script, revise, srt_time, write_srt, load_project, validate_brief, validate_timeline, validate_asset_manifest, ValidationError
+
+def test_asset_manifest_validates_sidecars_references_and_duplicate_ids(tmp_path):
+    assets=tmp_path/'assets'; assets.mkdir()
+    image=assets/'one.png'; image.write_bytes(b'one')
+    (assets/'one.png.json').write_text(json.dumps({'id':'one','path':'one.png','source':'fixture','rights':'CC0','subject':'sample'}))
+    assert validate_asset_manifest(assets)=={'valid':True,'asset_count':1,'errors':[]}
+    second=assets/'two.png'; second.write_bytes(b'two')
+    (assets/'two.png.json').write_text(json.dumps({'id':'one','path':'missing.png','source':'fixture','rights':'CC0','subject':'sample'}))
+    result=validate_asset_manifest(assets)
+    assert not result['valid']
+    assert any('conflicting id' in error for error in result['errors'])
+    assert any('path reference' in error for error in result['errors'])
+
+def test_asset_manifest_detects_duplicate_file_content(tmp_path):
+    assets=tmp_path/'assets'; assets.mkdir()
+    for name in ('one.png','two.png'):
+        (assets/name).write_bytes(b'same synthetic bytes '+name.encode())
+        (assets/f'{name}.json').write_text(json.dumps({'source':'fixture','rights':'CC0','subject':name}))
+    (assets/'two.png').write_bytes((assets/'one.png').read_bytes())
+    assert any('duplicate file content' in error for error in validate_asset_manifest(assets)['errors'])
+
+def test_asset_manifest_reports_missing_malformed_and_required_metadata(tmp_path):
+    assets=tmp_path/'assets'; assets.mkdir()
+    (assets/'missing.png').write_bytes(b'x')
+    (assets/'broken.jpg').write_bytes(b'x'); (assets/'broken.jpg.json').write_text('{')
+    (assets/'incomplete.svg').write_bytes(b'x'); (assets/'incomplete.svg.json').write_text('{"source":"fixture"}')
+    errors=validate_asset_manifest(assets)['errors']
+    assert any('missing metadata sidecar' in error for error in errors)
+    assert any('malformed JSON' in error for error in errors)
+    assert sum("required non-empty string" in error for error in errors)==2
 
 def test_parse_and_outputs(tmp_path):
     assets=tmp_path/'assets'; assets.mkdir(); (assets/'archive.png').write_bytes(b'fixture')

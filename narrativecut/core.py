@@ -51,6 +51,45 @@ def load_project(path: Path):
         raise ValidationError(f"{path.name}: malformed YAML ({type(exc).__name__})") from None
     return validate_timeline(data)
 
+def validate_asset_manifest(root: Path):
+    """Validate local asset files and their adjacent <filename>.json metadata."""
+    if not root.exists() or not root.is_dir():
+        raise ValidationError(f"assets: directory does not exist: {root}")
+    errors=[]; ids={}; hashes={}; media=[]
+    for path in sorted(root.rglob("*")):
+        if not path.is_file() or path.name.endswith(".json") or path.suffix.lower() in {".txt", ".md"}: continue
+        media.append(path)
+        digest=hashlib.sha256(path.read_bytes()).hexdigest()
+        if digest in hashes: errors.append(f"{path}: duplicate file content also found at {hashes[digest]}")
+        else: hashes[digest]=path
+        sidecar=path.with_suffix(path.suffix+".json")
+        if not sidecar.is_file():
+            errors.append(f"{path}: missing metadata sidecar {sidecar.name}"); continue
+        try: meta=json.loads(sidecar.read_text())
+        except (OSError, json.JSONDecodeError) as exc:
+            errors.append(f"{sidecar}: malformed JSON ({type(exc).__name__})"); continue
+        if not isinstance(meta, dict):
+            errors.append(f"{sidecar}: expected an object"); continue
+        for field in ("source", "rights", "subject"):
+            if not isinstance(meta.get(field), str) or not meta[field].strip():
+                errors.append(f"{sidecar}: required non-empty string '{field}'")
+        reference=meta.get("path")
+        if reference is not None and (not isinstance(reference, str) or not reference.strip()):
+            errors.append(f"{sidecar}: 'path' must be a non-empty relative path")
+        elif reference is not None:
+            target=(sidecar.parent/reference).resolve()
+            if Path(reference).is_absolute() or target != path.resolve():
+                errors.append(f"{sidecar}: path reference must resolve to asset {path.name}")
+        identity=meta.get("id")
+        if identity is not None:
+            if not isinstance(identity, str) or not identity.strip(): errors.append(f"{sidecar}: 'id' must be a non-empty string")
+            elif identity in ids:
+                kind="duplicate" if ids[identity][1] == meta else "conflicting"
+                errors.append(f"{sidecar}: {kind} id '{identity}' also used by {ids[identity][0]}")
+            else: ids[identity]=(sidecar,meta)
+    if not media: errors.append(f"{root}: no asset files found")
+    return {"valid":not errors,"asset_count":len(media),"errors":errors}
+
 @dataclass
 class Beat:
     id: str; text: str; start: float; duration: float; query: str

@@ -32,6 +32,8 @@ The JSON path has no runtime dependencies. Unsupported schema versions and inval
 
 The command writes `timeline.json`, `subtitles.srt`, and `asset-license-report.json`. Assets are discovered only when accompanied by a sidecar file such as `clip.png.json` containing `source`, `rights`, and `subject`.
 
+Validate an asset directory before planning with `python -m narrativecut --validate-assets --assets path/to/assets`. Each asset needs an adjacent `<filename>.<extension>.json` sidecar with non-empty string values for `source`, `rights`, and `subject`. Optional `id` values must be unique; an optional `path` must resolve to that asset. The validator reports missing files, malformed metadata, invalid references, and duplicate or conflicting IDs. It validates supplied metadata and paths; it does not determine whether a rights claim is legally accurate or inspect media contents.
+
 ## Architecture
 
 `parse_script` creates timed beats; `catalog_assets` reads local asset metadata; `select` ranks deterministic matches; `build` writes planning outputs; `assemble` and `qc` are optional FFmpeg-backed render and validation steps.
