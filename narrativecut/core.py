@@ -1,6 +1,7 @@
 from __future__ import annotations
 import hashlib, json, math, re, subprocess, tempfile
 from dataclasses import dataclass, asdict
+from fractions import Fraction
 from pathlib import Path
 
 TYPE_WEIGHT = {"footage": 1.0, "public_domain": .95, "stock": .9, "screenshot": .85, "document": .82, "chart": .8, "ai": .35, "unknown": .1}
@@ -10,6 +11,20 @@ SCHEMA_VERSION = "1.0"
 
 class ValidationError(ValueError):
     """A deterministic project schema validation failure."""
+
+class MediaError(ValueError):
+    """A deterministic local media or FFmpeg failure."""
+
+def _media_run(command, label):
+    try:
+        return subprocess.run(command, check=True, capture_output=True, text=True,
+                              stdin=subprocess.DEVNULL)
+    except FileNotFoundError:
+        raise MediaError(f"{label}: required executable '{command[0]}' was not found; install FFmpeg") from None
+    except OSError:
+        raise MediaError(f"{label}: cannot start '{command[0]}'; check its installation and permissions") from None
+    except subprocess.CalledProcessError as exc:
+        raise MediaError(f"{label}: {command[0]} failed (exit {exc.returncode})") from None
 
 def _object(value, label):
     if not isinstance(value, dict): raise ValidationError(f"{label}: expected an object")
@@ -191,6 +206,19 @@ def assemble(timeline_path: Path, out: Path, narration: Path | None = None):
         raise ValueError("editorial gate failed: " + "; ".join(t.get("editorial_gate",{}).get("reasons",[])))
     if narration is None or not narration.is_file():
         raise ValueError("real narration audio is required; refusing silent fallback")
+    # Detect unavailable tools before allocating temporary render output.
+    _media_run(["ffmpeg", "-version"], "FFmpeg preflight")
+    _media_run(["ffprobe", "-version"], "ffprobe preflight")
+    for path, label in ((narration, "narration"), *((Path(s.get("asset", {}).get("path", "")), f"scene {s['id']} media") for s in t["scenes"])):
+        probe = _media_run(["ffprobe", "-v", "error", "-show_entries", "stream=codec_type", "-of", "json", str(path)], f"{label} decode preflight")
+        try:
+            streams = json.loads(probe.stdout).get("streams", [])
+        except (ValueError, AttributeError):
+            raise MediaError(f"{label}: ffprobe returned invalid metadata") from None
+        expected = "audio" if label == "narration" else None
+        if not streams or (expected and not any(s.get("codec_type") == expected for s in streams)):
+            raise MediaError(f"{label}: no decodable {expected or 'media'} stream found")
+        _media_run(["ffmpeg", "-v", "error", "-xerror", "-err_detect", "explode", "-i", str(path), "-map", "0:a:0" if expected else "0:v:0", "-f", "null", "-"], f"{label} decode")
     with tempfile.TemporaryDirectory(prefix="documentary-render-") as td:
         td=Path(td); clips=[]; manifest=[]
         for i, scene in enumerate(t["scenes"]):
@@ -200,9 +228,7 @@ def assemble(timeline_path: Path, out: Path, narration: Path | None = None):
             clip=td/f"{i:03d}.mp4"
             source=Path(asset)
             if source.suffix.lower()==".svg":
-                subprocess.run(["qlmanage","-t","-s","1920","-o",str(td),str(source)],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-                asset=str(td/(source.name+".png"))
-                input_args=["-loop","1","-i",asset]
+                raise MediaError(f"scene {scene['id']}: SVG rasterization is not supported by the FFmpeg-only renderer; use a raster image")
             elif source.suffix.lower() in {".mp4",".mov",".m4v",".webm",".mkv"}:
                 input_args=["-stream_loop","-1","-i",asset]
             else:
@@ -212,12 +238,12 @@ def assemble(timeline_path: Path, out: Path, narration: Path | None = None):
             elif treatment in {"push_in","document_zoom","crop_reframe"}: vf="scale=2200:1238,crop=1920:1080:x='(iw-1920)*(0.15+0.7*t/{d})':y='(ih-1080)*(0.1+0.5*t/{d})',format=yuv420p".format(d=max(scene["duration"],1))
             elif treatment == "pan_reveal": vf="scale=2100:1181,crop=1920:1080:x='(iw-1920)*t/{d}':y=40,format=yuv420p".format(d=max(scene["duration"],1))
             else: vf="scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,format=yuv420p"
-            subprocess.run(["ffmpeg","-y","-v","error",*input_args,"-t",str(scene["duration"]),"-vf",vf,"-r","30","-an","-c:v","libx264","-preset","ultrafast",str(clip)],check=True)
+            _media_run(["ffmpeg","-y","-v","error","-xerror",*input_args,"-t",str(scene["duration"]),"-vf",vf,"-r","30","-an","-c:v","libx264","-preset","ultrafast",str(clip)],f"scene {scene['id']} render")
             clips.append(clip); manifest.append(f"file '{clip}'")
         concat=td/"concat.txt"; concat.write_text("\n".join(manifest)+"\n")
         video=td/"video.mp4"
-        subprocess.run(["ffmpeg","-y","-v","error","-f","concat","-safe","0","-i",str(concat),"-c","copy",str(video)],check=True)
-        subprocess.run(["ffmpeg","-y","-v","error","-i",str(video),"-i",str(narration),"-filter_complex","[1:a]aresample=48000,apad,atrim=duration="+str(dur)+"[a]","-map","0:v:0","-map","[a]","-t",str(dur),"-c:v","copy","-c:a","aac","-shortest",str(out)],check=True)
+        _media_run(["ffmpeg","-y","-v","error","-xerror","-f","concat","-safe","0","-i",str(concat),"-c","copy",str(video)],"clip concatenation")
+        _media_run(["ffmpeg","-y","-v","error","-xerror","-i",str(video),"-i",str(narration),"-filter_complex","[1:a]aresample=48000,apad,atrim=duration="+str(dur)+"[a]","-map","0:v:0","-map","[a]","-t",str(dur),"-c:v","copy","-c:a","aac","-shortest",str(out)],"final render")
 
 def revise(timeline_path: Path, scene_id: str, out: Path):
     t=json.loads(timeline_path.read_text()); ids={s["id"] for s in t["scenes"]}
@@ -226,14 +252,44 @@ def revise(timeline_path: Path, scene_id: str, out: Path):
 
 def qc(timeline_path: Path, video: Path, out: Path):
     t=json.loads(timeline_path.read_text())
-    probe=json.loads(subprocess.check_output(["ffprobe","-v","error","-show_format","-show_streams","-of","json",str(video)],text=True))
-    v=next((s for s in probe["streams"] if s["codec_type"]=="video"),None)
-    audio=next((s for s in probe["streams"] if s["codec_type"]=="audio"),None)
-    loudness=subprocess.run(["ffmpeg","-v","info","-i",str(video),"-af","ebur128=framelog=verbose","-f","null","-"],capture_output=True,text=True)
-    match=re.findall(r"I:\s*(-?\d+(?:\.\d+)?) LUFS",loudness.stdout + loudness.stderr)
-    integrated=float(match[-1]) if match else None
-    checks={"duration_expected":t["duration"],"duration_actual":float(probe["format"]["duration"]),"resolution":[v.get("width"),v.get("height")] if v else None,"has_audio":audio is not None,"integrated_lufs":integrated}
-    technical=bool(v and audio and integrated is not None and int(v.get("width",0))==1920 and int(v.get("height",0))==1080 and float(probe["format"]["duration"]) >= t["duration"]-.1)
     editorial=t.get("editorial_gate",{"pass":False,"reasons":["missing editorial gate"]})
-    result={"pass":technical and editorial["pass"],"technical_pass":technical,"editorial_pass":editorial["pass"],"checks":checks,"editorial":editorial,"treatment_qc":{"treatment_diversity":editorial.get("metrics",{}).get("treatment_diversity",0),"composition_diversity":editorial.get("metrics",{}).get("composition_diversity",0),"consecutive_static_equivalent_shots":editorial.get("metrics",{}).get("consecutive_static_equivalent_shots",0)}}
+    expected=float(t["duration"]); fps=float(t.get("fps", 30)); reasons=[]; probe={}; v=audio=None; actual=None; actual_fps=frames=None; audio_duration=None; integrated=None
+    try:
+        probe_result=_media_run(["ffprobe","-v","error","-count_frames","-show_format","-show_streams","-of","json",str(video)],"QC ffprobe")
+        probe=json.loads(probe_result.stdout)
+        v=next((s for s in probe["streams"] if s["codec_type"]=="video"),None)
+        audio=next((s for s in probe["streams"] if s["codec_type"]=="audio"),None)
+        if not v: reasons.append("QC: video stream is missing")
+        if not audio: reasons.append("QC: audio stream is missing")
+        if v:
+            try: actual_fps=float(Fraction(v["avg_frame_rate"]))
+            except (ValueError, ZeroDivisionError): raise ValueError("QC: invalid video fps metadata") from None
+            try: frames=int(v["nb_read_frames"])
+            except (ValueError, TypeError): raise ValueError("QC: invalid decoded frame count") from None
+            if actual_fps <= 0 or not math.isfinite(actual_fps) or abs(actual_fps-fps) > .01: reasons.append(f"QC: fps must be {fps:g} (got {actual_fps:g})")
+            if frames <= 0: reasons.append("QC: video has no decoded frames")
+        if audio:
+            audio_duration=float(audio["duration"])
+            if int(audio["sample_rate"]) <= 0 or int(audio["channels"]) <= 0: reasons.append("QC: audio stream has invalid sample rate or channel count")
+        actual=float(probe["format"]["duration"])
+        if not math.isfinite(actual) or abs(actual-expected) > .1: reasons.append(f"QC: duration {actual:g}s is outside expected {expected:g}s ±0.1s")
+        for label, stream_duration in (("video", float(v["duration"]) if v else None), ("audio", audio_duration)):
+            if stream_duration is not None and (not math.isfinite(stream_duration) or abs(stream_duration-expected) > .1): reasons.append(f"QC: {label} duration is outside expected {expected:g}s ±0.1s")
+        tolerance=max(2, math.ceil(fps*.1))
+        expected_frames=round(expected*fps)
+        if frames is not None and abs(frames-expected_frames) > tolerance: reasons.append(f"QC: decoded frame count {frames} differs from expected {expected_frames} by more than {tolerance}")
+        if v and (int(v["width"])!=1920 or int(v["height"])!=1080): reasons.append("QC: resolution must be 1920x1080")
+        loudness=_media_run(["ffmpeg","-v","info","-xerror","-err_detect","explode","-i",str(video),"-map","0:v:0","-map","0:a:0","-af","ebur128=framelog=verbose","-f","null","-"],"QC ffmpeg decode and audio analysis")
+        match=re.findall(r"I:\s*(-?(?:\d+(?:\.\d+)?|inf)) LUFS",loudness.stdout + loudness.stderr)
+        if match: integrated=float(match[-1])
+        if integrated is None or not math.isfinite(integrated) or integrated <= -70: reasons.append("QC: audio is silent, undecodable, or has no integrated loudness measurement")
+    except MediaError as exc:
+        reasons.append(str(exc))
+    except (ValueError, TypeError, KeyError, StopIteration, ZeroDivisionError, OverflowError) as exc:
+        reasons.append(str(exc) if str(exc).startswith("QC:") else f"QC: ffprobe returned invalid media metadata ({type(exc).__name__})")
+    checks={"duration_expected":expected,"duration_actual":actual if actual is None or math.isfinite(actual) else None,"resolution":[v.get("width"),v.get("height")] if v else None,"has_audio":audio is not None,"integrated_lufs":integrated,"fps":actual_fps,"frame_count":frames,"expected_frame_count":round(expected*fps) if math.isfinite(fps) else None,"audio_duration":audio_duration if audio_duration is None or math.isfinite(audio_duration) else None}
+    technical=not reasons
+    if not editorial.get("pass"):
+        reasons.append("QC: editorial gate failed: " + "; ".join(editorial.get("reasons", [])))
+    result={"pass":technical and editorial["pass"],"technical_pass":technical,"editorial_pass":editorial["pass"],"checks":checks,"reasons":reasons,"editorial":editorial,"treatment_qc":{"treatment_diversity":editorial.get("metrics",{}).get("treatment_diversity",0),"composition_diversity":editorial.get("metrics",{}).get("composition_diversity",0),"consecutive_static_equivalent_shots":editorial.get("metrics",{}).get("consecutive_static_equivalent_shots",0)}}
     out.write_text(json.dumps(result,indent=2)+"\n"); return result

@@ -32,6 +32,14 @@ The JSON path has no runtime dependencies. Unsupported schema versions and inval
 
 The command writes `timeline.json`, `subtitles.srt`, and `asset-license-report.json`. Assets are discovered only when accompanied by a sidecar file such as `clip.png.json` containing `source`, `rights`, and `subject`.
 
+### Local rendering and QC
+
+Rendering requires both `ffmpeg` and `ffprobe` on `PATH`, plus decodable local visual assets and narration audio. `python -m narrativecut --assemble` returns a non-zero exit code and a clear error when tools, media, or narration are missing or cannot be decoded. QC checks the video and audio streams, full-decode success, 1920×1080 resolution, the timeline FPS, decoded frame count, audio sample rate/channels and measured loudness. The video, audio and container durations must each be within **0.1 seconds** of the planned duration in either direction; decoded frames may differ from the planned count by at most two frames or 10% of the FPS, whichever is greater. Silent or undecodable audio fails QC. QC failures are written to `qc-report.json` and return a non-zero exit code.
+
+The renderer accepts video and raster-image assets when the installed FFmpeg can decode them. SVG input currently requires rasterization before rendering.
+
+Run the synthetic FFmpeg render and QC integration test with `python -m pytest tests/test_render.py`. It creates its own media fixtures and needs no credentials or supplied media.
+
 Validate an asset directory before planning with `python -m narrativecut --validate-assets --assets path/to/assets`. Each asset needs an adjacent `<filename>.<extension>.json` sidecar with non-empty string values for `source`, `rights`, and `subject`. Optional `id` values must be unique; an optional `path` must resolve to that asset. The validator reports missing files, malformed metadata, invalid references, and duplicate or conflicting IDs. It validates supplied metadata and paths; it does not determine whether a rights claim is legally accurate or inspect media contents.
 
 ## Architecture

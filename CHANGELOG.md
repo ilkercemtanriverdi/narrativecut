@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1] - Unreleased
+
+- Preserve CLI and validation exit codes; report QC failures as non-zero command exits.
+- Require local FFmpeg and ffprobe, reject missing or undecodable media, and check render duration in both directions, frame rate/count, resolution, and narration audio.
+- Add a synthetic end-to-end render/QC integration test and run it in CI with FFmpeg, ffprobe, and the optional YAML dependency installed.
+- Close [issue #2](https://github.com/ilkercemtanriverdi/narrativecut/issues/2): local FFmpeg rendering and the synthetic integration test are covered. SVG assets need rasterization before rendering.
+
 ## [0.2.0] - 2026-09-25
 
 - Added version 1.0 JSON project validation and optional YAML input via `narrativecut[yaml]`; legacy JSON briefs remain supported.
