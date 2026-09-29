@@ -2,7 +2,7 @@ import argparse, json
 from pathlib import Path
 from .core import build, assemble, revise, qc, load_project, validate_brief, validate_asset_manifest, ValidationError
 
-def main():
+def _main():
     p=argparse.ArgumentParser(); p.add_argument("--project",type=Path); p.add_argument("--brief",type=Path); p.add_argument("--script",type=Path); p.add_argument("--assets",type=Path); p.add_argument("--output",type=Path); p.add_argument("--narration",type=Path); p.add_argument("--assemble",action="store_true"); p.add_argument("--revise"); p.add_argument("--validate-assets",action="store_true"); a=p.parse_args()
     if a.validate_assets:
         if not a.assets: p.error("--assets is required with --validate-assets")
@@ -23,9 +23,24 @@ def main():
         except ValidationError as exc: p.error(str(exc))
         except json.JSONDecodeError: p.error(f"{a.brief.name}: malformed JSON (JSONDecodeError)")
         script=a.script.read_text()
-    if a.revise: revise(a.output/"timeline.json",a.revise,a.output/"revision-manifest.json"); print(a.output/"revision-manifest.json"); return
+    if a.revise: revise(a.output/"timeline.json",a.revise,a.output/"revision-manifest.json"); print(a.output/"revision-manifest.json"); return 0
     t=build(brief,script,a.assets,a.output)
     if a.assemble:
-        assemble(a.output/"timeline.json",a.output/"documentary.mp4",a.narration); qc(a.output/"timeline.json",a.output/"documentary.mp4",a.output/"qc-report.json")
+        assemble(a.output/"timeline.json",a.output/"documentary.mp4",a.narration)
+        report=qc(a.output/"timeline.json",a.output/"documentary.mp4",a.output/"qc-report.json")
+        if not report["pass"]:
+            import sys
+            print("QC failed: " + "; ".join(report.get("reasons", [])), file=sys.stderr)
+            return 1
     print(json.dumps({"duration":t["duration"],"scenes":len(t["scenes"]),"output":str(a.output)}))
-if __name__ == "__main__": main()
+    return 0
+
+def main():
+    try:
+        return _main()
+    except (ValueError, OSError) as exc:
+        import sys
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+if __name__ == "__main__": raise SystemExit(main())
