@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.2.1] - Unreleased
+## [0.2.1] - 2026-09-29
 
 - Preserve CLI and validation exit codes; report QC failures as non-zero command exits.
 - Require local FFmpeg and ffprobe, reject missing or undecodable media, and check render duration in both directions, frame rate/count, resolution, and narration audio.
