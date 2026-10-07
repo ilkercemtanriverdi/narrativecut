@@ -1,14 +1,16 @@
 import argparse, json
 from pathlib import Path
-from .claude_plan import plan_scenes, DEFAULT_MODEL
+from .claude_plan import plan_scenes, load_scene_plan, DEFAULT_MODEL
 from .core import build, assemble, revise, qc, load_project, validate_brief, validate_asset_manifest, ValidationError
 
 def _main():
-    p=argparse.ArgumentParser(); p.add_argument("--project",type=Path); p.add_argument("--brief",type=Path); p.add_argument("--script",type=Path); p.add_argument("--assets",type=Path); p.add_argument("--output",type=Path); p.add_argument("--narration",type=Path); p.add_argument("--assemble",action="store_true"); p.add_argument("--revise"); p.add_argument("--validate-assets",action="store_true"); p.add_argument("--plan-with-claude",action="store_true",help="plan editorial scenes with Claude and write scene-plan.json"); p.add_argument("--model",default=DEFAULT_MODEL); a=p.parse_args()
+    p=argparse.ArgumentParser(); p.add_argument("--project",type=Path); p.add_argument("--brief",type=Path); p.add_argument("--script",type=Path); p.add_argument("--assets",type=Path); p.add_argument("--output",type=Path); p.add_argument("--narration",type=Path); p.add_argument("--assemble",action="store_true"); p.add_argument("--revise"); p.add_argument("--validate-assets",action="store_true"); p.add_argument("--plan-with-claude",action="store_true",help="plan editorial scenes with Claude and write scene-plan.json"); p.add_argument("--model",default=DEFAULT_MODEL); p.add_argument("--scene-plan",type=Path,help="use a saved scene-plan.json to guide asset selection"); a=p.parse_args()
     if a.validate_assets:
         if not a.assets: p.error("--assets is required with --validate-assets")
         result=validate_asset_manifest(a.assets); print(json.dumps(result,indent=2)); return 0 if result["valid"] else 1
     if not a.output: p.error("--output is required")
+    if a.scene_plan and (a.plan_with_claude or a.revise): p.error("--scene-plan cannot be combined with --plan-with-claude or --revise")
+    if a.scene_plan and not a.scene_plan.is_file(): p.error(f"--scene-plan file does not exist: {a.scene_plan}")
     if a.plan_with_claude:
         if a.project:
             try: project=load_project(a.project)
@@ -39,7 +41,8 @@ def _main():
         except json.JSONDecodeError: p.error(f"{a.brief.name}: malformed JSON (JSONDecodeError)")
         script=a.script.read_text()
     if a.revise: revise(a.output/"timeline.json",a.revise,a.output/"revision-manifest.json"); print(a.output/"revision-manifest.json"); return 0
-    t=build(brief,script,a.assets,a.output)
+    plan=load_scene_plan(a.scene_plan,script) if a.scene_plan else None
+    t=build(brief,script,a.assets,a.output,plan)
     if a.assemble:
         assemble(a.output/"timeline.json",a.output/"documentary.mp4",a.narration)
         report=qc(a.output/"timeline.json",a.output/"documentary.mp4",a.output/"qc-report.json")

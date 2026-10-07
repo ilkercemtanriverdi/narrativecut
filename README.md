@@ -61,7 +61,20 @@ python -m narrativecut --plan-with-claude \
   --output examples/claude-demo/output
 ```
 
-The default model is `claude-opus-5-5` (override with `--model`). [`examples/claude-demo/output/scene-plan.json`](examples/claude-demo/output/scene-plan.json) is unedited output from a live run on the fictional demo script. The planning tests use a fake client and need no credentials; set `NARRATIVECUT_LIVE_CLAUDE=1` with credentials to also run the live API test. The rest of the pipeline does not call any model or network provider, and the scene plan is not yet fed into asset selection.
+The default model is `claude-opus-5-5` (override with `--model`). [`examples/claude-demo/output/scene-plan.json`](examples/claude-demo/output/scene-plan.json) is unedited output from a live run on the fictional demo script. The planning tests use a fake client and need no credentials; set `NARRATIVECUT_LIVE_CLAUDE=1` with credentials to also run the live API test. The rest of the pipeline does not call any model or network provider.
+
+Pass a saved plan to a normal build with `--scene-plan`. Each beat's asset ranking then also uses its scene's `search_query` terms and gives a bonus to assets whose `role` matches the planned `visual_role`. The plan must match the script beat for beat, or the build stops with an error. The build stays deterministic, makes no API call, and records the plan scene behind each beat in `timeline.json`.
+
+```sh
+python -m narrativecut \
+  --brief examples/claude-demo/brief.json \
+  --script examples/claude-demo/script.txt \
+  --assets examples/claude-demo/assets \
+  --scene-plan examples/claude-demo/output/scene-plan.json \
+  --output out/claude-demo
+```
+
+[`examples/claude-demo/compare.py`](examples/claude-demo/compare.py) builds the demo with and without the saved live plan against a pool of 10 synthetic placeholder assets. Its output, [`selection-comparison.md`](examples/claude-demo/output/selection-comparison.md), shows that 4 of 8 beats change asset. The plan replaces generic B-roll with archive documents on two beats and moves two others to the document that fits their claim (the strike letter, the newspaper page).
 
 ## Architecture
 
@@ -112,14 +125,14 @@ Rights metadata is an input contract, not a legal warranty.
 
 ## Status
 
-v0.3.0 is a small OSS core extracted from a larger private workspace. Rendering is local and optional. Deterministic planning and validation need no network provider; only the optional `--plan-with-claude` step calls the Claude API.
+v0.4.0 is a small OSS core extracted from a larger private workspace. Rendering is local and optional. Deterministic planning and validation need no network provider; only the optional `--plan-with-claude` step calls the Claude API.
 
 ## Limitations and roadmap
 
 - Rights metadata is an input contract, not a legal warranty.
 - Rendering requires local FFmpeg, narration, and decodable media.
 - The deterministic planner does not download media or call model/provider APIs.
-- Claude scene planning is implemented as an optional, separate step; next steps are feeding the scene plan into asset selection and adding an evaluation set for plan quality.
+- Claude scene planning is optional; a saved plan guides deterministic asset selection. Next step: an evaluation set for plan and selection quality.
 - Future work may add more media validators and platform-neutral render adapters.
 
 Roadmap discussions live in [GitHub Issues](https://github.com/ilkercemtanriverdi/narrativecut/issues).

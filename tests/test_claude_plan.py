@@ -3,8 +3,8 @@ from pathlib import Path
 from types import SimpleNamespace
 import pytest
 sys.path.insert(0,str(Path(__file__).parents[1]))
-from narrativecut.claude_plan import PLAN_SCHEMA, PlanningError, plan_scenes, validate_plan
-from narrativecut.core import parse_script
+from narrativecut.claude_plan import PLAN_SCHEMA, PlanningError, load_scene_plan, plan_scenes, validate_plan
+from narrativecut.core import build, parse_script
 
 SCRIPT='In 1969 the archive opened to the public. Visitors could read the original letters. Today the collection holds 40,000 documents.'
 
@@ -53,3 +53,48 @@ def test_unusable_responses_raise_and_write_nothing(tmp_path,stop_reason,payload
 def test_live_claude_plan(tmp_path):
     plan=plan_scenes({'title':'Archive'},SCRIPT,tmp_path)
     assert sum(len(s['beat_ids']) for s in plan['scenes'])==plan['beat_count']==3
+
+def asset(root, name, role, subject):
+    (root/f'{name}.png').write_bytes(name.encode())
+    (root/f'{name}.png.json').write_text(json.dumps({'kind':'public_domain','source':'archive','rights':'public domain','subject':subject,'role':role}))
+
+def test_scene_plan_guides_asset_selection(tmp_path):
+    assets=tmp_path/'assets'; assets.mkdir()
+    asset(assets,'room','context-broll','archive public room')
+    asset(assets,'ledger','document-evidence','donation ledger')
+    script='The archive opened to the public.'
+    baseline=build({},script,assets,tmp_path/'base')
+    assert baseline['scenes'][0]['asset']['subject']=='archive public room' and 'scene_plan' not in baseline
+    plan=plan_scenes({},script,tmp_path/'plan',client=FakeClient({'scenes':[dict(scene(['scene-001']),search_query='donation ledger')]}))
+    guided=build({},script,assets,tmp_path/'guided',plan=plan)
+    s=guided['scenes'][0]
+    assert s['asset']['subject']=='donation ledger'
+    assert s['plan']=={'scene':'plan-001','visual_role':'document-evidence','search_query':'donation ledger'}
+    assert guided['scene_plan']['planner']['model']=='claude-opus-5-5'
+    assert [x['start'] for x in guided['scenes']]==[x['start'] for x in baseline['scenes']]
+    assert build({},script,assets,tmp_path/'again',plan=plan)==guided
+
+def test_load_scene_plan_rejects_plan_for_other_script(tmp_path):
+    plan_scenes({},SCRIPT,tmp_path,client=FakeClient({'scenes':[scene(['scene-001','scene-002','scene-003'])]}))
+    assert load_scene_plan(tmp_path/'scene-plan.json',SCRIPT)['beat_count']==3
+    with pytest.raises(PlanningError,match='does not match the script'):
+        load_scene_plan(tmp_path/'scene-plan.json',SCRIPT.replace('1969','1970'))
+    saved=json.loads((tmp_path/'scene-plan.json').read_text())
+    for broken in ({k:v for k,v in saved.items() if k!='planner'}, {**saved,'scenes':[{k:v for k,v in saved['scenes'][0].items() if k!='id'}]}):
+        (tmp_path/'broken.json').write_text(json.dumps(broken))
+        with pytest.raises(PlanningError): load_scene_plan(tmp_path/'broken.json',SCRIPT)
+    (tmp_path/'bad.json').write_text('{')
+    with pytest.raises(PlanningError,match='malformed JSON'): load_scene_plan(tmp_path/'bad.json',SCRIPT)
+
+def test_cli_builds_with_saved_scene_plan(tmp_path):
+    import subprocess
+    assets=tmp_path/'assets'; assets.mkdir(); asset(assets,'ledger','document-evidence','donation ledger')
+    (tmp_path/'script.txt').write_text(SCRIPT); (tmp_path/'brief.json').write_text('{}')
+    plan_scenes({},SCRIPT,tmp_path/'plan',client=FakeClient({'scenes':[scene(['scene-001','scene-002','scene-003'])]}))
+    args=[sys.executable,'-m','narrativecut','--brief',str(tmp_path/'brief.json'),'--script',str(tmp_path/'script.txt'),'--assets',str(assets),'--output',str(tmp_path/'out')]
+    ok=subprocess.run([*args,'--scene-plan',str(tmp_path/'plan'/'scene-plan.json')],capture_output=True,text=True,cwd=Path(__file__).parents[1])
+    assert ok.returncode==0, ok.stderr
+    assert json.loads((tmp_path/'out'/'timeline.json').read_text())['scenes'][2]['plan']['scene']=='plan-001'
+    (tmp_path/'script.txt').write_text('Something else entirely.')
+    bad=subprocess.run([*args,'--scene-plan',str(tmp_path/'plan'/'scene-plan.json')],capture_output=True,text=True,cwd=Path(__file__).parents[1])
+    assert bad.returncode==1 and 'does not match the script' in bad.stderr

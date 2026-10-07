@@ -7,6 +7,7 @@ from pathlib import Path
 TYPE_WEIGHT = {"footage": 1.0, "public_domain": .95, "stock": .9, "screenshot": .85, "document": .82, "chart": .8, "ai": .35, "unknown": .1}
 VISUAL_ROLES = {"primary-footage","specific-entity","document-evidence","data-chart","screenshot","context-broll","explanatory-graphic","title-card"}
 DIRECT = {"direct", "supporting"}
+ROLE_MATCH_BONUS = 2.0
 SCHEMA_VERSION = "1.0"
 
 class ValidationError(ValueError):
@@ -132,13 +133,18 @@ def catalog_assets(root: Path):
         items.append({"path":str(p.resolve()),"sha256":sha(p),"kind":kind,"terms":terms,"source":meta["source"],"rights":meta["rights"],"subject":meta["subject"],"role":meta.get("role","explanatory-graphic"),"match_level":meta.get("match_level","abstract"),"specificity":meta.get("specificity","none"),"chapter":meta.get("chapter","general"),"claim_type":meta.get("claim_type","context"),"treatment":meta.get("treatment","static")})
     return items
 
-def select(beat: Beat, assets, used):
+def select(beat: Beat, assets, used, guidance=None):
+    """Rank assets by term overlap and type; optional scene-plan guidance adds query terms and a role bonus."""
     words=set(re.findall(r"[a-z0-9]+", (beat.query+" "+beat.text).lower()))
+    role=None
+    if guidance:
+        words |= set(re.findall(r"[a-z0-9]+", guidance["search_query"].lower())); role=guidance["visual_role"]
     ranked=[]
     for a in assets:
         overlap=len(words & set(re.findall(r"[a-z0-9]+", a["terms"])))
         repeat=.15 if a["sha256"] in used else 0
-        ranked.append((overlap + TYPE_WEIGHT.get(a["kind"],.1) - repeat, a))
+        bonus=ROLE_MATCH_BONUS if role and a["role"]==role else 0
+        ranked.append((overlap + TYPE_WEIGHT.get(a["kind"],.1) + bonus - repeat, a))
     return max(ranked, key=lambda x:x[0])[1] if ranked else None
 
 def srt_time(s):
@@ -186,14 +192,18 @@ def choose_treatment(asset, index, start):
     else: choices=[("chapter_card", "wide"), ("push_in", "close"), ("crop_reframe", "left")]
     return choices[(index + (1 if start < 60 else 0)) % len(choices)]
 
-def build(brief, script, assets_dir, output):
+def build(brief, script, assets_dir, output, plan=None):
+    """Build planning outputs; `plan` is a validated scene plan whose visual role and search query guide asset selection."""
     output.mkdir(parents=True,exist_ok=True); beats=parse_script(script); assets=catalog_assets(assets_dir); used=set(); scenes=[]
+    guidance={beat_id:{"scene":s["id"],"visual_role":s["visual_role"],"search_query":s["search_query"]} for s in (plan or {}).get("scenes",[]) for beat_id in s["beat_ids"]}
     for b in beats:
-        a=select(b,assets,used)
+        a=select(b,assets,used,guidance.get(b.id))
         if a: used.add(a["sha256"])
         treatment, composition = choose_treatment(a, len(scenes), b.start) if a else ("static", "fit")
         scenes.append({"id":b.id,"text":b.text,"start":b.start,"duration":b.duration,"query":b.query,"asset":a,"treatment":treatment,"composition":composition})
+        if b.id in guidance: scenes[-1]["plan"]=guidance[b.id]
     timeline={"format":"youtube-documentary-v1","width":1920,"height":1080,"fps":30,"title":brief.get("title","Untitled"),"scenes":scenes,"duration":round(sum(b.duration for b in beats),3)}
+    if plan: timeline["scene_plan"]={"schema_version":plan["schema_version"],"planner":plan["planner"]}
     timeline["editorial_gate"]=editorial_gate(timeline)
     (output/"timeline.json").write_text(json.dumps(timeline,indent=2)+"\n"); write_srt(beats,output/"subtitles.srt")
     report={"assets": [s["asset"] for s in scenes if s["asset"]],"unmatched_scenes":[s["id"] for s in scenes if not s["asset"]],"policy":"retrieval-first; AI optional and penalized","rights_basis":"sidecar metadata supplied by user"}

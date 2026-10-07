@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.4.0] - 2026-10-07
+
+- Feed the Claude scene plan into asset selection: `--scene-plan` loads a saved `scene-plan.json`, and each beat's ranking uses its scene's `search_query` terms plus a bonus for assets whose role matches the planned `visual_role`.
+- Reject scene plans that do not match the script beat for beat; record the plan scene behind each beat and the planner model in `timeline.json`.
+- Add synthetic placeholder assets and `examples/claude-demo/compare.py`; on the live demo plan, 4 of 8 beats change asset (`selection-comparison.md`).
+
 ## [0.3.0] - 2026-10-07
 
 - Add optional Claude scene planning (`--plan-with-claude`, `narrativecut[claude]`): JSON-schema constrained output, local validation of beat coverage and order, deterministic timing, and `scene-plan.json` output.

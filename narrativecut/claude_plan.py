@@ -139,3 +139,22 @@ def plan_scenes(brief, script, output: Path, client=None, model=DEFAULT_MODEL):
     output.mkdir(parents=True, exist_ok=True)
     (output / "scene-plan.json").write_text(json.dumps(plan, indent=2, ensure_ascii=False) + "\n")
     return plan
+
+def load_scene_plan(path: Path, script):
+    """Load a saved `scene-plan.json` and check that it was planned from this exact script."""
+    try: data = json.loads(path.read_text())
+    except OSError as exc: raise PlanningError(f"cannot read scene plan: {exc.strerror or exc}") from None
+    except json.JSONDecodeError: raise PlanningError(f"{path.name}: malformed JSON (JSONDecodeError)") from None
+    if not isinstance(data, dict) or data.get("schema_version") != PLAN_SCHEMA_VERSION:
+        raise PlanningError(f"{path.name}: unsupported or missing schema_version; expected '{PLAN_SCHEMA_VERSION}'")
+    if not isinstance(data.get("planner"), dict): raise PlanningError(f"{path.name}: planner: expected an object")
+    beats = parse_script(script)
+    try: validate_plan(data, beats)
+    except PlanningError as exc: raise PlanningError(f"{path.name} does not match the script ({exc}); re-run --plan-with-claude") from None
+    by_id = {b.id: b for b in beats}
+    for s in data["scenes"]:
+        if not isinstance(s.get("id"), str) or not isinstance(s.get("search_query"), str):
+            raise PlanningError(f"{path.name}: scene {s.get('id')!r}: expected string 'id' and 'search_query'")
+        if s.get("text") != " ".join(by_id[x].text for x in s["beat_ids"]):
+            raise PlanningError(f"{path.name}: scene {s.get('id')!r} does not match the script; re-run --plan-with-claude")
+    return data
