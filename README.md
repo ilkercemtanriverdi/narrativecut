@@ -1,5 +1,11 @@
 # NarrativeCut
 
+[Website](https://narrativecut.com.tr) · Founded in 2026 · Bootstrapped solo founder · Early-stage
+
+NarrativeCut is a bootstrapped early-stage project founded in 2026 by solo founder İlker Cem Tanrıverdi. Project founding date: September 2026; not yet incorporated. Open-source core available on GitHub. Current status: early-stage development.
+
+Project website: [narrativecut.com.tr](https://narrativecut.com.tr) · Contact: [ilker@narrativecut.com.tr](mailto:ilker@narrativecut.com.tr)
+
 [![CI](https://github.com/ilkercemtanriverdi/narrativecut/actions/workflows/ci.yml/badge.svg)](https://github.com/ilkercemtanriverdi/narrativecut/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) [![Latest release](https://img.shields.io/github/v/release/ilkercemtanriverdi/narrativecut)](https://github.com/ilkercemtanriverdi/narrativecut/releases/latest)
 
 Turn a script, a JSON brief, and rights-described local assets into a deterministic documentary plan: timeline, subtitles, asset-license report, and optional 16:9 MP4 rendering.
@@ -98,6 +104,7 @@ v0.2.0 is a small OSS core extracted from a larger private workspace. Rendering 
 - Rights metadata is an input contract, not a legal warranty.
 - Rendering requires local FFmpeg, narration, and decodable media.
 - The planner does not download media or call model/provider APIs.
+- Planned Claude-powered editorial reasoning layer for script analysis and scene planning; Claude integration is not currently implemented.
 - Future work may add more media validators and platform-neutral render adapters.
 
 Roadmap discussions live in [GitHub Issues](https://github.com/ilkercemtanriverdi/narrativecut/issues).
