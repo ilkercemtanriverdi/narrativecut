@@ -1,9 +1,11 @@
 # Changelog
 
-## [Unreleased]
+## [0.3.0] - 2026-10-07
 
 - Add optional Claude scene planning (`--plan-with-claude`, `narrativecut[claude]`): JSON-schema constrained output, local validation of beat coverage and order, deterministic timing, and `scene-plan.json` output.
 - Add offline tests with a fake client, an opt-in live API test, and a demo script with unedited live output in `examples/claude-demo/`.
+- Add a Claude scene planning demo section to the project website, built from the unedited live output.
+- Align package version metadata (`pyproject.toml`, `narrativecut.__version__`) at 0.3.0.
 
 ## [0.2.1] - 2026-09-29
 

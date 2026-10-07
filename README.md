@@ -112,7 +112,7 @@ Rights metadata is an input contract, not a legal warranty.
 
 ## Status
 
-v0.2.0 is a small OSS core extracted from a larger private workspace. Rendering is local and optional. Deterministic planning and validation need no network provider; only the optional `--plan-with-claude` step calls the Claude API.
+v0.3.0 is a small OSS core extracted from a larger private workspace. Rendering is local and optional. Deterministic planning and validation need no network provider; only the optional `--plan-with-claude` step calls the Claude API.
 
 ## Limitations and roadmap
 
