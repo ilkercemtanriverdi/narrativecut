@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+- Add optional Claude scene planning (`--plan-with-claude`, `narrativecut[claude]`): JSON-schema constrained output, local validation of beat coverage and order, deterministic timing, and `scene-plan.json` output.
+- Add offline tests with a fake client, an opt-in live API test, and a demo script with unedited live output in `examples/claude-demo/`.
+
 ## [0.2.1] - 2026-09-29
 
 - Preserve CLI and validation exit codes; report QC failures as non-zero command exits.

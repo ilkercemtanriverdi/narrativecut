@@ -1,13 +1,28 @@
 import argparse, json
 from pathlib import Path
+from .claude_plan import plan_scenes, DEFAULT_MODEL
 from .core import build, assemble, revise, qc, load_project, validate_brief, validate_asset_manifest, ValidationError
 
 def _main():
-    p=argparse.ArgumentParser(); p.add_argument("--project",type=Path); p.add_argument("--brief",type=Path); p.add_argument("--script",type=Path); p.add_argument("--assets",type=Path); p.add_argument("--output",type=Path); p.add_argument("--narration",type=Path); p.add_argument("--assemble",action="store_true"); p.add_argument("--revise"); p.add_argument("--validate-assets",action="store_true"); a=p.parse_args()
+    p=argparse.ArgumentParser(); p.add_argument("--project",type=Path); p.add_argument("--brief",type=Path); p.add_argument("--script",type=Path); p.add_argument("--assets",type=Path); p.add_argument("--output",type=Path); p.add_argument("--narration",type=Path); p.add_argument("--assemble",action="store_true"); p.add_argument("--revise"); p.add_argument("--validate-assets",action="store_true"); p.add_argument("--plan-with-claude",action="store_true",help="plan editorial scenes with Claude and write scene-plan.json"); p.add_argument("--model",default=DEFAULT_MODEL); a=p.parse_args()
     if a.validate_assets:
         if not a.assets: p.error("--assets is required with --validate-assets")
         result=validate_asset_manifest(a.assets); print(json.dumps(result,indent=2)); return 0 if result["valid"] else 1
     if not a.output: p.error("--output is required")
+    if a.plan_with_claude:
+        if a.project:
+            try: project=load_project(a.project)
+            except ValidationError as exc: p.error(str(exc))
+            brief=project["brief"]; script=project["script"]
+        else:
+            if not a.script or not a.script.is_file(): p.error("--script file is required with --plan-with-claude")
+            try: brief=validate_brief(json.loads(a.brief.read_text())) if a.brief else {}
+            except ValidationError as exc: p.error(str(exc))
+            except json.JSONDecodeError: p.error(f"{a.brief.name}: malformed JSON (JSONDecodeError)")
+            script=a.script.read_text()
+        plan=plan_scenes(brief,script,a.output,model=a.model)
+        print(json.dumps({"scenes":len(plan["scenes"]),"beats":plan["beat_count"],"model":plan["planner"]["model"],"output":str(a.output/"scene-plan.json")}))
+        return 0
     if a.project:
         if any((a.brief, a.script, a.assets)): p.error("--project cannot be combined with --brief, --script, or --assets")
         try: project=load_project(a.project)

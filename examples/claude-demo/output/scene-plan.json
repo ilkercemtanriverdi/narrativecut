@@ -1,0 +1,136 @@
+{
+  "schema_version": "1.0",
+  "title": "The Letters in the Basement",
+  "logline": "A forgotten basement archive of factory workers' letters reveals a 1934 strike that newspapers barely recorded, and a volunteer's sorting brings it back into history.",
+  "planner": {
+    "provider": "anthropic",
+    "model": "claude-opus-5-5",
+    "input_tokens": 1457,
+    "output_tokens": 1421
+  },
+  "beat_count": 8,
+  "scenes": [
+    {
+      "id": "plan-001",
+      "beat_ids": [
+        "scene-001"
+      ],
+      "start": 0.0,
+      "duration": 7.034,
+      "text": "In 1969 a small town library opened its basement archive to the public for the first time.",
+      "summary": "In 1969 a small town library opens its basement archive to the public for the first time.",
+      "purpose": "hook",
+      "claim_type": "event",
+      "visual_role": "primary-footage",
+      "search_query": "small town library basement archive 1969",
+      "on_screen_text": "1969",
+      "rationale": "Opening on the archive's first public opening sets the place and date that anchor the story."
+    },
+    {
+      "id": "plan-002",
+      "beat_ids": [
+        "scene-002",
+        "scene-003"
+      ],
+      "start": 7.034,
+      "duration": 11.173,
+      "text": "Inside were more than 3,000 letters written by factory workers between 1920 and 1950. Most had never been read by anyone outside the families who donated them.",
+      "summary": "The archive holds more than 3,000 letters by factory workers from 1920 to 1950, mostly unread outside the donor families.",
+      "purpose": "context",
+      "claim_type": "number",
+      "visual_role": "document-evidence",
+      "search_query": "handwritten factory worker letters 1920s 1940s archive boxes",
+      "on_screen_text": "3,000+ letters, 1920–1950",
+      "rationale": "The count and date range are specific claims best shown with the physical letters themselves."
+    },
+    {
+      "id": "plan-003",
+      "beat_ids": [
+        "scene-004"
+      ],
+      "start": 18.207,
+      "duration": 4.138,
+      "text": "A volunteer named Ayşe began sorting the letters by date.",
+      "summary": "A volunteer named Ayşe begins sorting the letters by date.",
+      "purpose": "transition",
+      "claim_type": "entity",
+      "visual_role": "specific-entity",
+      "search_query": "Ayşe library volunteer sorting letters archive",
+      "on_screen_text": "Ayşe, archive volunteer",
+      "rationale": "Introducing the named volunteer needs a visual of her or her work so viewers can put a person to the discovery."
+    },
+    {
+      "id": "plan-004",
+      "beat_ids": [
+        "scene-005"
+      ],
+      "start": 22.345,
+      "duration": 5.379,
+      "text": "She noticed that dozens mentioned the same strike in the winter of 1934.",
+      "summary": "Ayşe notices dozens of letters mention the same strike in the winter of 1934.",
+      "purpose": "evidence",
+      "claim_type": "event",
+      "visual_role": "document-evidence",
+      "search_query": "1934 letter mentioning factory strike close-up handwriting",
+      "on_screen_text": "Winter 1934",
+      "rationale": "The pattern across letters is the central discovery and should be shown through the letters that mention the strike."
+    },
+    {
+      "id": "plan-005",
+      "beat_ids": [
+        "scene-006"
+      ],
+      "start": 27.724,
+      "duration": 3.31,
+      "text": "Newspapers from that year barely covered the strike.",
+      "summary": "Newspapers from 1934 barely covered the strike.",
+      "purpose": "evidence",
+      "claim_type": "event",
+      "visual_role": "document-evidence",
+      "search_query": "1934 local newspaper front page archive microfilm",
+      "on_screen_text": "",
+      "rationale": "Contrasting the scant press coverage with the letters needs period newspaper pages as evidence."
+    },
+    {
+      "id": "plan-006",
+      "beat_ids": [
+        "scene-007"
+      ],
+      "start": 31.034,
+      "duration": 7.034,
+      "text": "The letters describe it in detail: the closed gates, the shared meals, the slow return to work.",
+      "summary": "The letters describe the strike in detail: closed gates, shared meals, the slow return to work.",
+      "purpose": "explanation",
+      "claim_type": "event",
+      "visual_role": "primary-footage",
+      "search_query": "1930s factory gates closed strike workers shared meal archival photo",
+      "on_screen_text": "",
+      "rationale": "Archival imagery of factory gates and workers can illustrate the letters' descriptions while narration carries the detail."
+    },
+    {
+      "id": "plan-007",
+      "beat_ids": [
+        "scene-008"
+      ],
+      "start": 38.069,
+      "duration": 7.862,
+      "text": "Today the collection has been digitised, and historians use it to reconstruct a story the official record left out.",
+      "summary": "The collection is now digitised, and historians use it to reconstruct a story the official record left out.",
+      "purpose": "conclusion",
+      "claim_type": "event",
+      "visual_role": "screenshot",
+      "search_query": "digitised letter collection online archive scan",
+      "on_screen_text": "",
+      "rationale": "Showing the digitised collection in use closes the arc from basement boxes to living historical source."
+    }
+  ],
+  "editorial_risks": [
+    "The script does not name the town, library, factory or newspapers, so specific footage and documents will be hard to source and generic stand-ins could mislead viewers.",
+    "The claims of 1969 as the first public opening, more than 3,000 letters, the 1920–1950 range and dozens of strike mentions need sourcing from the library's records.",
+    "The claim that newspapers barely covered the strike needs verification through a review of 1934 local press.",
+    "Ayşe's identity, consent and any available photo of her need confirming; without one, use only her hands or the work, and label any reconstruction.",
+    "The 1934 strike details come only from the letters and should be framed as the workers' accounts, not independently verified facts.",
+    "Archival images of factory gates and strikes must be from the actual site or clearly labelled as illustrative to avoid implying they show this strike.",
+    "The claim about historians using the collection would benefit from a named historian or study, which the script does not provide."
+  ]
+}

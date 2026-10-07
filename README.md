@@ -48,6 +48,21 @@ Run the synthetic FFmpeg render and QC integration test with `python -m pytest t
 
 Validate an asset directory before planning with `python -m narrativecut --validate-assets --assets path/to/assets`. Each asset needs an adjacent `<filename>.<extension>.json` sidecar with non-empty string values for `source`, `rights`, and `subject`. Optional `id` values must be unique; an optional `path` must resolve to that asset. The validator reports missing files, malformed metadata, invalid references, and duplicate or conflicting IDs. It validates supplied metadata and paths; it does not determine whether a rights claim is legally accurate or inspect media contents.
 
+### Claude scene planning
+
+`--plan-with-claude` sends the script, split into deterministic beats, to the Claude API and writes `scene-plan.json`. Claude groups beats into editorial scenes and proposes each scene's purpose, claim type, visual role, asset search query, on-screen text and rationale, plus a list of editorial risks such as claims that need sourcing. Output is constrained to a JSON schema and then validated locally: every beat must appear exactly once and in script order, or nothing is written. Scene timing is derived from the deterministic beats, not from model output.
+
+```sh
+python -m pip install -e '.[claude]'
+export ANTHROPIC_API_KEY=...
+python -m narrativecut --plan-with-claude \
+  --brief examples/claude-demo/brief.json \
+  --script examples/claude-demo/script.txt \
+  --output examples/claude-demo/output
+```
+
+The default model is `claude-opus-5-5` (override with `--model`). [`examples/claude-demo/output/scene-plan.json`](examples/claude-demo/output/scene-plan.json) is unedited output from a live run on the fictional demo script. The planning tests use a fake client and need no credentials; set `NARRATIVECUT_LIVE_CLAUDE=1` with credentials to also run the live API test. The rest of the pipeline does not call any model or network provider, and the scene plan is not yet fed into asset selection.
+
 ## Architecture
 
 `parse_script` creates timed beats; `catalog_assets` reads local asset metadata; `select` ranks deterministic matches; `build` writes planning outputs; `assemble` and `qc` are optional FFmpeg-backed render and validation steps.
@@ -97,14 +112,14 @@ Rights metadata is an input contract, not a legal warranty.
 
 ## Status
 
-v0.2.0 is a small OSS core extracted from a larger private workspace. Rendering is local and optional; no network provider is required for planning or validation.
+v0.2.0 is a small OSS core extracted from a larger private workspace. Rendering is local and optional. Deterministic planning and validation need no network provider; only the optional `--plan-with-claude` step calls the Claude API.
 
 ## Limitations and roadmap
 
 - Rights metadata is an input contract, not a legal warranty.
 - Rendering requires local FFmpeg, narration, and decodable media.
-- The planner does not download media or call model/provider APIs.
-- Planned Claude-powered editorial reasoning layer for script analysis and scene planning; Claude integration is not currently implemented.
+- The deterministic planner does not download media or call model/provider APIs.
+- Claude scene planning is implemented as an optional, separate step; next steps are feeding the scene plan into asset selection and adding an evaluation set for plan quality.
 - Future work may add more media validators and platform-neutral render adapters.
 
 Roadmap discussions live in [GitHub Issues](https://github.com/ilkercemtanriverdi/narrativecut/issues).
