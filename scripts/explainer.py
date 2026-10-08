@@ -18,6 +18,8 @@ BG, INK, MUTED, ACCENT, LINE, PANEL = "0x11110f", "0xf4f1e9", "0xaaa89e", "0xd1f
 SANS = "/System/Library/Fonts/Supplemental/Arial Unicode.ttf"
 MONO = "/System/Library/Fonts/Menlo.ttc"
 PAD = 0.7
+# Animation cues are authored on this timeline (seconds per section) and scaled to the narration.
+AUTHORED = [9.0, 7.0, 11.5, 11.5, 11.5, 8.5]
 
 CAPTIONS = [
     "Small documentary teams lose days between the script, the footage, the rights notes and the edit.",
@@ -29,11 +31,12 @@ CAPTIONS = [
 ]
 
 class Card:
-    def __init__(self, tmp: Path, key: str):
-        self.tmp, self.key, self.filters, self.n = tmp, key, [], 0
+    def __init__(self, tmp: Path, key: str, scale: float = 1.0):
+        self.tmp, self.key, self.filters, self.n, self.scale = tmp, key, [], 0, scale
 
     def text(self, value, at, x, y, size=28, color=INK, font=SANS, fade=0.45, rise=18):
         self.n += 1
+        at, fade = at * self.scale, fade * min(1.0, self.scale)
         f = self.tmp / f"{self.key}-{self.n}.txt"
         f.write_text(value, encoding="utf-8")
         alpha = f"if(lt(t,{at}),0,min(1,(t-{at})/{fade}))"
@@ -41,6 +44,7 @@ class Card:
         self.filters.append(f"drawtext=fontfile='{font}':textfile='{f}':fontsize={size}:fontcolor={color}:alpha='{alpha}':x={x}:y='{ypos}':line_spacing=12")
 
     def box(self, x, y, w, h, color, at, thickness="fill"):
+        at *= self.scale
         self.filters.append(f"drawbox=x={x}:y={y}:w={w}:h={h}:color={color}:t={thickness}:enable='gte(t,{at})'")
 
     def chrome(self, index, caption, duration):
@@ -127,7 +131,7 @@ def render(audio_dir: Path, output: Path):
         for i, build in enumerate(SECTIONS, 1):
             audio = audio_dir / f"s{i}.mp3"
             dur = duration(audio)
-            card = Card(tmp, f"s{i}")
+            card = Card(tmp, f"s{i}", min(1.0, (dur - 1.0) / AUTHORED[i - 1]))
             build(card)
             card.chrome(i, CAPTIONS[i - 1], dur)
             part = tmp / f"part-{i}.mp4"
