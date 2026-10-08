@@ -1,10 +1,10 @@
 # NarrativeCut
 
-[Website](https://narrativecut.com.tr) · Founded in 2026 · Bootstrapped solo founder · Early-stage
+[Website](https://narrativecut.com.tr) · Founded September 2026 · Türkiye · Bootstrapped · Built on Claude
 
-NarrativeCut is a bootstrapped early-stage project founded in 2026 by solo founder İlker Cem Tanrıverdi. Project founding date: September 2026; not yet incorporated. Open-source core available on GitHub. Current status: early-stage development.
+NarrativeCut is a bootstrapped startup founded in September 2026 by solo founder İlker Cem Tanrıverdi, based in Türkiye. We build documentary production tooling on Claude: Claude plans scenes and visuals, and a deterministic engine turns that plan into a reviewable cut. The core is open source.
 
-Project website: [narrativecut.com.tr](https://narrativecut.com.tr) · Contact: [ilker@narrativecut.com.tr](mailto:ilker@narrativecut.com.tr)
+Website: [narrativecut.com.tr](https://narrativecut.com.tr) · Contact: [ilker@narrativecut.com.tr](mailto:ilker@narrativecut.com.tr)
 
 [![CI](https://github.com/ilkercemtanriverdi/narrativecut/actions/workflows/ci.yml/badge.svg)](https://github.com/ilkercemtanriverdi/narrativecut/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) [![Latest release](https://img.shields.io/github/v/release/ilkercemtanriverdi/narrativecut)](https://github.com/ilkercemtanriverdi/narrativecut/releases/latest)
 
