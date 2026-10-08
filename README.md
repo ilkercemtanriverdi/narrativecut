@@ -2,7 +2,7 @@
 
 [Website](https://narrativecut.com.tr) · Founded September 2026 · Türkiye · Bootstrapped · Built on Claude
 
-NarrativeCut is a bootstrapped startup founded in September 2026 by solo founder İlker Cem Tanrıverdi, based in Türkiye. We build documentary production tooling on Claude: Claude plans scenes and visuals, and a deterministic engine turns that plan into a reviewable cut. The core is open source.
+NarrativeCut is a bootstrapped startup founded in September 2026 by solo founder [İlker Cem Tanrıverdi](https://www.linkedin.com/in/ilker-cem-tanr%C4%B1verdi-0b24192a4), based in İzmir, Türkiye. We build documentary production tooling on Claude: Claude plans scenes and visuals, and a deterministic engine turns that plan into a reviewable cut. The core is open source.
 
 Website: [narrativecut.com.tr](https://narrativecut.com.tr) · Contact: [ilker@narrativecut.com.tr](mailto:ilker@narrativecut.com.tr)
 

@@ -7,6 +7,9 @@ stays deterministic: scene start and duration are derived from the beats that
 """
 from __future__ import annotations
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 from .core import VISUAL_ROLES, ValidationError, parse_script
 
@@ -70,10 +73,22 @@ def _prompt(brief, beats):
     lines.extend(f"[{b.id}] {b.text}" for b in beats)
     return "\n".join(lines)
 
+def _keychain_api_key():
+    """Read the API key from the macOS Keychain when it is not in the environment."""
+    if sys.platform != "darwin": return None
+    service = os.environ.get("NARRATIVECUT_KEYCHAIN_SERVICE", "ANTHROPIC_API_KEY")
+    try:
+        out = subprocess.run(["security", "find-generic-password", "-s", service, "-w"], capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError): return None
+    if out.returncode != 0: return None
+    return out.stdout.strip() or None
+
 def _client():
     try: import anthropic
     except ImportError: raise PlanningError("Claude planning requires the optional dependency: pip install 'narrativecut[claude]'") from None
-    return anthropic.Anthropic()
+    if os.environ.get("ANTHROPIC_API_KEY"): return anthropic.Anthropic()
+    key = _keychain_api_key()
+    return anthropic.Anthropic(api_key=key) if key else anthropic.Anthropic()
 
 def request_plan(client, brief, beats, model=DEFAULT_MODEL):
     """Call Claude with a JSON-schema constrained output and return the parsed plan and usage."""

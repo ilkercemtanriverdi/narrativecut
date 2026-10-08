@@ -98,3 +98,22 @@ def test_cli_builds_with_saved_scene_plan(tmp_path):
     (tmp_path/'script.txt').write_text('Something else entirely.')
     bad=subprocess.run([*args,'--scene-plan',str(tmp_path/'plan'/'scene-plan.json')],capture_output=True,text=True,cwd=Path(__file__).parents[1])
     assert bad.returncode==1 and 'does not match the script' in bad.stderr
+
+def test_keychain_key_used_when_env_missing(monkeypatch):
+    from narrativecut import claude_plan
+    calls=[]
+    def fake_run(cmd, **kw):
+        calls.append(cmd); return SimpleNamespace(returncode=0, stdout='sk-test\n')
+    monkeypatch.setattr(claude_plan.sys,'platform','darwin')
+    monkeypatch.setattr(claude_plan.subprocess,'run',fake_run)
+    monkeypatch.setenv('NARRATIVECUT_KEYCHAIN_SERVICE','my-service')
+    assert claude_plan._keychain_api_key()=='sk-test'
+    assert calls[0][:4]==['security','find-generic-password','-s','my-service']
+
+def test_keychain_missing_entry_returns_none(monkeypatch):
+    from narrativecut import claude_plan
+    monkeypatch.setattr(claude_plan.sys,'platform','darwin')
+    monkeypatch.setattr(claude_plan.subprocess,'run',lambda cmd, **kw: SimpleNamespace(returncode=44, stdout=''))
+    assert claude_plan._keychain_api_key() is None
+    monkeypatch.setattr(claude_plan.sys,'platform','linux')
+    assert claude_plan._keychain_api_key() is None
